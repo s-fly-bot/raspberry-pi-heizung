@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# True print on shell, False logs to logs/heizung.log
 debug_output = True
 
 import simplejson
@@ -7,15 +9,43 @@ import urllib
 import datetime
 import time
 import platform
-import os, sys
 from ConfigParser import SafeConfigParser
-# import logging
+import logging
+from logging import config
+import sys, os
 
-_config_file = pathname = os.path.dirname(sys.argv[0]) + "/etc/heizung.ini"
+_config_path = os.path.dirname(sys.argv[0])
+_config_file = _config_path + "/etc/heizung.conf"
 parser = SafeConfigParser()
 parser.read(_config_file)
-
 url = parser.get('heizung', 'url')
+
+# Set up a specific logger with our desired output level
+_config_path = os.path.dirname(sys.argv[0])
+
+class StreamToLogger(object):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+
+    def __init__(self, logger, log_level=logging.INFO):
+        self.logger = logger
+        self.log_level = log_level
+        self.linebuf = ''
+
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.log_level, line.rstrip())
+
+logging.config.fileConfig(_config_path+'/etc/logging.conf')
+
+stdout_logger = logging.getLogger('STDOUT')
+sl = StreamToLogger(stdout_logger, logging.INFO)
+sys.stdout = sl
+
+stderr_logger = logging.getLogger('STDERR')
+sl = StreamToLogger(stderr_logger, logging.ERROR)
+sys.stderr = sl
 
 raspberry = False
 if 'raspberrypi' in platform.uname():
@@ -111,20 +141,24 @@ def check_measurements():
 
     start_list = {}
     for l in data:
-        print datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S'),
         heizungs_dict = dict(zip(fields, l))
         minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
         start_kessel = "--"
-        print heizungs_dict['heizung_d'], heizungs_dict['d_heizung_pumpe'], heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl'],
         if heizungs_dict['speicher_3_kopf'] < 35 and heizungs_dict['speicher_4_mitte'] < 30 and heizungs_dict['speicher_5_boden'] < 30:
             if heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl'] <= 2:
                 # if heizungs_dict['heizung_d'] == 0:
                 #if minutes_ago_since_now < 15: # only if messurements are not so long ago
                     start_kessel = "ON"
         start_list[minutes_ago_since_now]=start_kessel
-        print start_kessel,
-        print minutes_ago_since_now,
-        print l
+        print "%r %r %r %.1f %r %r %r" % (
+              datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
+            , heizungs_dict['heizung_d']
+            , heizungs_dict['d_heizung_pumpe']
+            , heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl']
+            , start_kessel
+            , minutes_ago_since_now
+            , l
+        )
     print "-" * 77
 
     # check if kessel start is necessary:
