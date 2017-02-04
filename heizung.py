@@ -15,6 +15,7 @@ from logging import config
 import sys, os
 
 _config_path = os.path.abspath(os.path.dirname(sys.argv[0]))
+print "config_path: ", _config_path
 _config_file = _config_path + "/etc/heizung.conf"
 parser = SafeConfigParser()
 parser.read(_config_file)
