@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# True print on shell, False logs to logs/heizung.log
-debug_output = True
-
 import simplejson
 import urllib
 import datetime
@@ -14,8 +11,20 @@ import logging
 from logging import config
 import sys, os
 
-_config_path = os.path.abspath(os.path.dirname(sys.argv[0]))
+raspberry = False
+if 'raspberrypi' in platform.uname():
+    # global raspberry
+    raspberry = True
+    import RPi.GPIO as GPIO
 
+    RelaisHeizung = 23
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    GPIO.setup(RelaisHeizung,  GPIO.OUT)
+    GPIO.output(RelaisHeizung,  GPIO.LOW)
+
+# Set up a specific logger with our desired output level
+_config_path = os.path.abspath(os.path.dirname(sys.argv[0]))
 _config_file = _config_path + "/etc/heizung.conf"
 _config_logger = _config_path+'/etc/logging.conf'
 
@@ -25,9 +34,10 @@ print "config logger : ", _config_logger
 parser = SafeConfigParser()
 parser.read(_config_file)
 url = parser.get('heizung', 'url')
+log2log = parser.get('heizung', 'logger')
 
-# Set up a specific logger with our desired output level
-_config_path = os.path.dirname(sys.argv[0])
+print "print2logger  : ", log2log
+
 
 class StreamToLogger(object):
     """
@@ -43,28 +53,16 @@ class StreamToLogger(object):
         for line in buf.rstrip().splitlines():
             self.logger.log(self.log_level, line.rstrip())
 
-logging.config.fileConfig(_config_logger)
+if log2log is True:
+    logging.config.fileConfig(_config_logger)
 
-stdout_logger = logging.getLogger('STDOUT')
-sl = StreamToLogger(stdout_logger, logging.INFO)
-sys.stdout = sl
+    stdout_logger = logging.getLogger('STDOUT')
+    sl = StreamToLogger(stdout_logger, logging.INFO)
+    sys.stdout = sl
 
-stderr_logger = logging.getLogger('STDERR')
-sl = StreamToLogger(stderr_logger, logging.ERROR)
-sys.stderr = sl
-
-raspberry = False
-if 'raspberrypi' in platform.uname():
-    # global raspberry
-    raspberry = True
-    import RPi.GPIO as GPIO
-
-    RelaisHeizung = 23
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
-    GPIO.setup(RelaisHeizung,  GPIO.OUT)
-    GPIO.output(RelaisHeizung,  GPIO.LOW)
-
+    stderr_logger = logging.getLogger('STDERR')
+    sl = StreamToLogger(stderr_logger, logging.ERROR)
+    sys.stderr = sl
 
 fields = [
 ### ANALOG ####
@@ -136,14 +134,13 @@ def check_measurements():
 
     data = getMeasurementsFromHttp()
 
-    if debug_output:
-        heizungs_dict = dict(zip(fields, data[-1]))
-        for key, val in sorted(heizungs_dict.items()):
-            print '  {0:25} : {1:}'.format(key, val)
-        print '  {0:25} : {1:}'.format('datetime',
-                                        datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
-                                            '%Y-%m-%d %H:%M:%S'))
-        print "-"*77
+    heizungs_dict = dict(zip(fields, data[-1]))
+    for key, val in sorted(heizungs_dict.items()):
+        print '  {0:25} : {1:}'.format(key, val)
+    print '  {0:25} : {1:}'.format('datetime',
+                                    datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
+                                        '%Y-%m-%d %H:%M:%S'))
+    print "-"*77
 
     start_list = {}
     for l in data:
