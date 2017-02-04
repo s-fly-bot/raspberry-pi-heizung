@@ -15,8 +15,13 @@ from logging import config
 import sys, os
 
 _config_path = os.path.abspath(os.path.dirname(sys.argv[0]))
-print "config_path: ", _config_path
+
 _config_file = _config_path + "/etc/heizung.conf"
+_config_logger = _config_path+'/etc/logging.conf'
+
+print "config heizung: ", _config_file
+print "config logger : ", _config_logger
+
 parser = SafeConfigParser()
 parser.read(_config_file)
 url = parser.get('heizung', 'url')
@@ -38,7 +43,7 @@ class StreamToLogger(object):
         for line in buf.rstrip().splitlines():
             self.logger.log(self.log_level, line.rstrip())
 
-logging.config.fileConfig(_config_path+'/etc/logging.conf')
+logging.config.fileConfig(_config_logger)
 
 stdout_logger = logging.getLogger('STDOUT')
 sl = StreamToLogger(stdout_logger, logging.INFO)
