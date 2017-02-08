@@ -82,6 +82,7 @@ def logmessage(message):
         print message
 
 def start_kessel():
+    message = ""
     if raspberry:
         GPIO.output(RelaisHeizung, GPIO.HIGH)
     else:
@@ -90,6 +91,7 @@ def start_kessel():
     logmessage(message)
 
 def stop_kessel():
+    message = ""
     if raspberry:
         GPIO.output(RelaisHeizung, GPIO.LOW)
     else:
