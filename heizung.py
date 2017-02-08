@@ -38,31 +38,9 @@ log2log = parser.get('heizung', 'logger')
 
 print "print2logger  : ", log2log
 
-
-class StreamToLogger(object):
-    """
-    Fake file-like stream object that redirects writes to a logger instance.
-    """
-
-    def __init__(self, logger, log_level=logging.INFO):
-        self.logger = logger
-        self.log_level = log_level
-        self.linebuf = ''
-
-    def write(self, buf):
-        for line in buf.rstrip().splitlines():
-            self.logger.log(self.log_level, line.rstrip())
-
-if log2log is True:
-    logging.config.fileConfig(_config_logger)
-
-    stdout_logger = logging.getLogger('STDOUT')
-    sl = StreamToLogger(stdout_logger, logging.INFO)
-    sys.stdout = sl
-
-    stderr_logger = logging.getLogger('STDERR')
-    sl = StreamToLogger(stderr_logger, logging.ERROR)
-    sys.stderr = sl
+logging.config.fileConfig(_config_logger)
+logger = logging.getLogger('heizung')
+logger.propagate = False
 
 fields = [
 ### ANALOG ####
@@ -97,21 +75,27 @@ fields = [
 'd_solar_ladepumpe',
 'd_solar_freigabepumpe']
 
+def logmessage(message):
+    if log2log == "True":
+        logger.info(message)
+    else:
+        print message
 
 def start_kessel():
     if raspberry:
         GPIO.output(RelaisHeizung, GPIO.HIGH)
     else:
-        print "..test...:",
-    print "START_KESSEL"
-
+        message = "...test...: "
+    message += "START_KESSEL"
+    logmessage(message)
 
 def stop_kessel():
     if raspberry:
         GPIO.output(RelaisHeizung, GPIO.LOW)
     else:
-        print "...test...:",
-    print "STOP_KESSEL"
+        message = "...test...: "
+    message += "STOP_KESSEL"
+    logmessage(message)
 
 
 def getMeasurementsFromHttp():
@@ -128,19 +112,19 @@ def getTimeDifferenceFromNow(timestamp):
 
 def check_measurements():
     start_kessel = "--"
-    print "-"*77
-    print "------------- New Test on Measurements: %s -----------------" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print "-"*77
+    logmessage( "-"*77 )
+    logmessage( "------------- New Test on Measurements: %s -----------------" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') )
+    logmessage( "-"*77 )
 
     data = getMeasurementsFromHttp()
 
     heizungs_dict = dict(zip(fields, data[-1]))
     for key, val in sorted(heizungs_dict.items()):
-        print '  {0:25} : {1:}'.format(key, val)
-    print '  {0:25} : {1:}'.format('datetime',
+        logmessage( '  {0:25} : {1:}'.format(key, val) )
+    logmessage( '  {0:25} : {1:}'.format('datetime',
                                     datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
-                                        '%Y-%m-%d %H:%M:%S'))
-    print "-"*77
+                                        '%Y-%m-%d %H:%M:%S')) )
+    logmessage( "-"*77 )
 
     start_list = {}
     for l in data:
@@ -153,7 +137,7 @@ def check_measurements():
                 #if minutes_ago_since_now < 15: # only if messurements are not so long ago
                     start_kessel = "ON"
         start_list[minutes_ago_since_now]=start_kessel
-        print "%r %r %r %.1f %r %r %r" % (
+        logmessage( "%r %r %r %.1f %r %r %r" % (
               datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
             , heizungs_dict['heizung_d']
             , heizungs_dict['d_heizung_pumpe']
@@ -161,8 +145,8 @@ def check_measurements():
             , start_kessel
             , minutes_ago_since_now
             , l
-        )
-    print "-" * 77
+        ))
+    logmessage( "-"*77 )
 
     # check if kessel start is necessary:
     for minutes_ago_since_now, start in start_list.iteritems():
