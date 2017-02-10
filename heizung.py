@@ -5,6 +5,7 @@ import simplejson
 import urllib
 import datetime
 import time
+from time import gmtime, strftime
 import platform
 from ConfigParser import SafeConfigParser
 import logging
@@ -82,6 +83,9 @@ def logmessage(message):
     else:
         print message
 
+logmessage("+-----  S T A R T  ----------------------------------")
+logmessage("|   %r" % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+logmessage("+----------------------------------------------------")
 
 def start_kessel():
     message = ""
