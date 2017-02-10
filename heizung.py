@@ -75,11 +75,13 @@ fields = [
 'd_solar_ladepumpe',
 'd_solar_freigabepumpe']
 
+
 def logmessage(message):
     if log2log == "True":
         logger.info(message)
     else:
         print message
+
 
 def start_kessel():
     message = ""
@@ -89,6 +91,7 @@ def start_kessel():
         message = "...test...: "
     message += "START_KESSEL"
     logmessage(message)
+
 
 def stop_kessel():
     message = ""
@@ -114,20 +117,20 @@ def getTimeDifferenceFromNow(timestamp):
 
 def check_measurements():
     start_kessel = "--"
-    logmessage( "-"*77 )
-    logmessage( "------------- New Test on Measurements: %s -----------------" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') )
-    logmessage( "-"*77 )
+    logmessage("-"*77)
+    logmessage("------------- New Test on Measurements: %s -----------------" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    logmessage("-"*77)
 
     data = getMeasurementsFromHttp()
 
     try:
         heizungs_dict = dict(zip(fields, data[-1]))
         for key, val in sorted(heizungs_dict.items()):
-            logmessage( '  {0:25} : {1:}'.format(key, val) )
-        logmessage( '  {0:25} : {1:}'.format('datetime',
+            logmessage('  {0:25} : {1:}'.format(key, val))
+        logmessage('  {0:25} : {1:}'.format('datetime',
                                         datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
-                                            '%Y-%m-%d %H:%M:%S')) )
-        logmessage( "-"*77 )
+                                            '%Y-%m-%d %H:%M:%S')))
+        logmessage("-"*77)
 
         start_list = {}
         for l in data:
@@ -140,7 +143,7 @@ def check_measurements():
                     #if minutes_ago_since_now < 15: # only if messurements are not so long ago
                         start_kessel = "ON"
             start_list[minutes_ago_since_now]=start_kessel
-            logmessage( "%r %r %r %.1f %r %r %r" % (
+            logmessage("%r %r %r %.1f %r %r %r" % (
                   datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
                 , heizungs_dict['heizung_d']
                 , heizungs_dict['d_heizung_pumpe']
