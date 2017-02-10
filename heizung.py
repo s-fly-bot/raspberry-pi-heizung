@@ -120,35 +120,39 @@ def check_measurements():
 
     data = getMeasurementsFromHttp()
 
-    heizungs_dict = dict(zip(fields, data[-1]))
-    for key, val in sorted(heizungs_dict.items()):
-        logmessage( '  {0:25} : {1:}'.format(key, val) )
-    logmessage( '  {0:25} : {1:}'.format('datetime',
-                                    datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
-                                        '%Y-%m-%d %H:%M:%S')) )
-    logmessage( "-"*77 )
+    try:
+        heizungs_dict = dict(zip(fields, data[-1]))
+        for key, val in sorted(heizungs_dict.items()):
+            logmessage( '  {0:25} : {1:}'.format(key, val) )
+        logmessage( '  {0:25} : {1:}'.format('datetime',
+                                        datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
+                                            '%Y-%m-%d %H:%M:%S')) )
+        logmessage( "-"*77 )
 
-    start_list = {}
-    for l in data:
-        heizungs_dict = dict(zip(fields, l))
-        minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
-        start_kessel = "--"
-        if heizungs_dict['speicher_3_kopf'] < 35 and heizungs_dict['speicher_4_mitte'] < 30 and heizungs_dict['speicher_5_boden'] < 30:
-            if heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl'] <= 2:
-                # if heizungs_dict['heizung_d'] == 0:
-                #if minutes_ago_since_now < 15: # only if messurements are not so long ago
-                    start_kessel = "ON"
-        start_list[minutes_ago_since_now]=start_kessel
-        logmessage( "%r %r %r %.1f %r %r %r" % (
-              datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
-            , heizungs_dict['heizung_d']
-            , heizungs_dict['d_heizung_pumpe']
-            , heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl']
-            , start_kessel
-            , minutes_ago_since_now
-            , l
-        ))
-    logmessage( "-"*77 )
+        start_list = {}
+        for l in data:
+            heizungs_dict = dict(zip(fields, l))
+            minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
+            start_kessel = "--"
+            if heizungs_dict['speicher_3_kopf'] < 35 and heizungs_dict['speicher_4_mitte'] < 30 and heizungs_dict['speicher_5_boden'] < 30:
+                if heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl'] <= 2:
+                    # if heizungs_dict['heizung_d'] == 0:
+                    #if minutes_ago_since_now < 15: # only if messurements are not so long ago
+                        start_kessel = "ON"
+            start_list[minutes_ago_since_now]=start_kessel
+            logmessage( "%r %r %r %.1f %r %r %r" % (
+                  datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
+                , heizungs_dict['heizung_d']
+                , heizungs_dict['d_heizung_pumpe']
+                , heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl']
+                , start_kessel
+                , minutes_ago_since_now
+                , l
+            ))
+    except IndexError:
+        logmessage("-"*77)
+        logmessage("there is nothing to examine...")
+    logmessage("-"*77)
 
     # check if kessel start is necessary:
     for minutes_ago_since_now, start in start_list.iteritems():
