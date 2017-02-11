@@ -35,6 +35,7 @@ print "config logger : ", _config_logger
 parser = SafeConfigParser()
 parser.read(_config_file)
 url = parser.get('heizung', 'url')
+url_internal = parser.get('heizung', 'url_internal')
 log2log = parser.get('heizung', 'logger')
 
 print "print2logger  : ", log2log
@@ -107,6 +108,14 @@ def stop_kessel():
     logmessage(message)
 
 
+def transferData():
+    logmessage('------------------ transfer data from uvr1611 ------------------------')
+    response = urllib.urlopen(url_internal)
+    data = response.read()
+    logmessage(data)
+    logmessage('------------------ transfer done -------------------------------------')
+
+
 def getMeasurementsFromHttp():
     response = urllib.urlopen(url)
     data = simplejson.loads(response.read())
@@ -173,14 +182,20 @@ def check_measurements():
 
 
 def main():
+    c = 0
+    t = 60  # sleeping time in seconds
     while True:
+        if c >= t * 2:
+            c = 0
+            transferData()
+
         if check_measurements() == "ON":
             start_kessel()
         else:
             stop_kessel()
 
-        time.sleep(60)
-
+        time.sleep(t)
+        c+=t
 
 if __name__ == '__main__':
     main()
