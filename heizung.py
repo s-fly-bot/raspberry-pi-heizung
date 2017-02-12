@@ -119,7 +119,7 @@ def transferData():
         else:
             message = "| response is not what expected"
 
-        logmessage(data)
+        logmessage(message)
 
     except:
         logger.error("| something went wrong while retrieving from %s" % url_internal)
