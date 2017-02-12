@@ -194,20 +194,15 @@ def check_measurements():
 
 
 def main():
-    c = 0
-    t = 60  # sleeping time in seconds
     while True:
-        if c >= t * 2:
-            c = 0
-            transferData()
+        transferData()
 
         if check_measurements() == "ON":
             start_kessel()
         else:
             stop_kessel()
 
-        time.sleep(t)
-        c+=t
+        time.sleep(120)  # sleeping time in seconds
 
 if __name__ == '__main__':
     main()
