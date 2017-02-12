@@ -109,11 +109,22 @@ def stop_kessel():
 
 
 def transferData():
-    logmessage('------------------ transfer data from uvr1611 ------------------------')
-    response = urllib.urlopen(url_internal)
-    data = response.read()
-    logmessage(data)
-    logmessage('------------------ transfer done -------------------------------------')
+    logmessage('+------------------ transfer data from uvr1611 ------------------------')
+    try:
+        response = urllib.urlopen(url_internal)
+        data = response.read()
+
+        if data == "[]":
+            message = "| OK: []"
+        else:
+            message = "| response is not what expected"
+
+        logmessage(data)
+
+    except:
+        logger.error("| something went wrong while retrieving from %s" % url_internal)
+
+    logmessage('+----------------- transfer done -------------------------------------')
 
 
 def getMeasurementsFromHttp():
@@ -129,12 +140,13 @@ def getTimeDifferenceFromNow(timestamp):
 
 
 def check_measurements():
-    start_kessel = "--"
     logmessage("-"*77)
     logmessage("------------- New Test on Measurements: %s -----------------" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     logmessage("-"*77)
 
     data = getMeasurementsFromHttp()
+
+    start_kessel = "--"
     start_list = {}
 
     try:
