@@ -135,6 +135,7 @@ def check_measurements():
     logmessage("-"*77)
 
     data = getMeasurementsFromHttp()
+    start_list = {}
 
     try:
         heizungs_dict = dict(zip(fields, data[-1]))
@@ -145,7 +146,6 @@ def check_measurements():
                                             '%Y-%m-%d %H:%M:%S')))
         logmessage("-"*77)
 
-        start_list = {}
         for l in data:
             heizungs_dict = dict(zip(fields, l))
             minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
