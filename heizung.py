@@ -111,7 +111,7 @@ def stop_kessel():
 def transferData():
     logmessage('+------------------ transfer data from uvr1611 ------------------------')
     try:
-        if 'raspberrypi' in platform.uname():
+        if raspberry:
             response = urllib.urlopen(url_internal)
             data = response.read()
 
