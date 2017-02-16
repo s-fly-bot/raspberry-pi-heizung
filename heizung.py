@@ -111,14 +111,16 @@ def stop_kessel():
 def transferData():
     logmessage('+------------------ transfer data from uvr1611 ------------------------')
     try:
-        response = urllib.urlopen(url_internal)
-        data = response.read()
+        if 'raspberrypi' in platform.uname():
+            response = urllib.urlopen(url_internal)
+            data = response.read()
 
-        if data == "[]":
-            message = "| OK: []"
+            if data == "[]":
+                message = "| OK: []"
+            else:
+                message = "| response is not what expected"
         else:
-            message = "| response is not what expected"
-
+            message="| i'm not on raspberry..."
         logmessage(message)
 
     except:
