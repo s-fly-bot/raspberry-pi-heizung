@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import simplejson
-import urllib
+import urllib2
 import datetime
 import time
 from time import gmtime, strftime
@@ -107,13 +107,22 @@ def stop_kessel():
     message += "STOP_KESSEL"
     logmessage(message)
 
+def getResonseResult(url):
+    request = urllib2.Request(url)
+    # response = opener.open(request, timeout=30)
+    response = urllib2.urlopen(request, timeout=30)
+    response_result = response.read()
+
+    return response_result
 
 def transferData():
     logmessage('+------------------ transfer data from uvr1611 ------------------------')
     try:
         if raspberry:
-            response = urllib.urlopen(url_internal)
-            data = response.read()
+#            response = urllib.urlopen(url_internal)
+#            data = response.read()
+
+            data = getResonseResult(url_internal)
 
             if data == "[]":
                 message = "| OK: []"
@@ -130,8 +139,8 @@ def transferData():
 
 
 def getMeasurementsFromHttp():
-    response = urllib.urlopen(url)
-    data = simplejson.loads(response.read())
+#    response = urllib.urlopen(url)
+    data = simplejson.loads(getResonseResult(url))
     return data[-20:]
 
 
@@ -164,11 +173,21 @@ def check_measurements():
             heizungs_dict = dict(zip(fields, l))
             minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
             start_kessel = "--"
+
             if heizungs_dict['speicher_3_kopf'] < 35 and heizungs_dict['speicher_4_mitte'] < 30 and heizungs_dict['speicher_5_boden'] < 30:
                 if heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl'] <= 2:
                     # if heizungs_dict['heizung_d'] == 0:
                     #if minutes_ago_since_now < 15: # only if messurements are not so long ago
                         start_kessel = "ON"
+
+            if heizungs_dict['speicher_3_kopf'] < 29 and heizungs_dict['speicher_4_mitte'] < 29 and heizungs_dict['speicher_5_boden'] < 29:
+                start_kessel = "ON"
+
+            # but if solar rediation is going up..*[]:
+            # be optimistic that enough hot water will be produced
+            # TODO
+            # start_kessel = "--"
+
             start_list[minutes_ago_since_now]=start_kessel
             logmessage("%r %r %r %.1f %r %r %r" % (
                   datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
