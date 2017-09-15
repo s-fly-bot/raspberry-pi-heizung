@@ -215,15 +215,23 @@ def check_measurements():
 
 
 def main():
-    while True:
-        transferData()
+    if len(sys.argv) > 1 and sys.argv[1] == 'ON':
+        logmessage("Start burn-off per comandline...")
+        start_kessel()
+        # better wait some time?
+        time.sleep(2)
+        logmessage("manually start done....")
 
-        if check_measurements() == "ON":
-            start_kessel()
-        else:
-            stop_kessel()
+    else:
+        while True:
+            transferData()
 
-        time.sleep(120)  # sleeping time in seconds
+            if check_measurements() == "ON":
+                start_kessel()
+            else:
+                stop_kessel()
+
+            time.sleep(120)  # sleeping time in seconds
 
 if __name__ == '__main__':
     main()
