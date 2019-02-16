@@ -129,7 +129,7 @@ def logmessage(message):
 logmessage("+-----  S T A R T  ----------------------------------")
 logmessage("|   %r" % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 logmessage("+----------------------------------------------------")
-logmessage("| operation mode: ", operating_mode)
+logmessage("| operation mode: %s" % operating_mode)
 
 
 def start_kessel():
