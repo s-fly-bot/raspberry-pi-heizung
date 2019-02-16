@@ -318,7 +318,14 @@ def getMeasurementsFromUVR1611():
 
     for values in data:
         result_dict[fields_dict_ein[values['id']]] = values['value']
-    return result_dict
+    data = []
+    for key in fields:
+        if key == 'timestamp':
+            data.append(round(time()))
+        else:
+            data.append(result_dict[key])
+
+    return data, result_dict
 
 def pushDataToHosting(data):
     """
@@ -419,7 +426,7 @@ def main():
             start = time()
             data=[]
             try:
-                data = getMeasurementsFromUVR1611()
+                data, result_dict = getMeasurementsFromUVR1611()
                 # Todo: pushDataToHosting(data)
 
             except:
