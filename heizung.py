@@ -41,7 +41,7 @@ parser = SafeConfigParser()
 parser.read(_config_file)
 url = parser.get('heizung', 'url')
 url_internal = parser.get('heizung', 'url_internal')
-url_blnet = parser.get('heizung', 'blnet')
+blnet_host = parser.get('heizung', 'blnet_host')
 operating_mode = parser.get('heizung', 'operating_mode')
 
 log2log = parser.get('heizung', 'logger')
@@ -192,7 +192,7 @@ def getMeasurementsFromHttp():
 def getMeasurementsFromUVR1611():
     # Ausgaenge / not only digital ones
     r = requests.get(
-        'http://' + url_blnet + "/580600.htm",
+        'http://' + blnet_host + "/580600.htm",
     )
 
     # Parse  DOM object from HTMLCode
