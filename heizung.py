@@ -13,6 +13,7 @@ import sys, os
 from htmldom import htmldom
 import requests
 import re
+import six
 # import html
 # import json
 
@@ -309,9 +310,9 @@ def getMeasurementsFromUVR1611():
         match_dict = match.groupdict()
         # convert html entities to unicode characters
         for key in match_dict.keys():
-            # match_dict[key] = html.unescape(match_dict[key])
+            # Todo this works only in py3 match_dict[key] = html.unescape(match_dict[key])
             # also replace decimal "," by "."
-            match_dict[key] = match_dict[key].replace(",", ".").replace('&nbsp;','')
+            match_dict[key] = match_dict[key].replace(",", ".").replace('&nbsp;', '')
         # and append formatted dict
         data.append(match_dict)
         match = next(match_iter, False)
@@ -323,7 +324,14 @@ def getMeasurementsFromUVR1611():
         if key == 'timestamp':
             data.append(round(time()))
         else:
-            data.append(result_dict[key])
+            value = result_dict[key]
+            if isinstance(value, six.string_types):
+                # It's a string !!
+                if '.' in value:
+                    value = float(result_dict[key])
+                else:
+                    value = int(result_dict[key])
+            data.append(value)
 
     return data, result_dict
 
@@ -367,9 +375,9 @@ def check_measurements(uvr_direct_data=None):
             heizungs_dict = dict(zip(fields, l))
             minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
             start_kessel = "--"
-
+            spread = heizungs_dict['heizung_vl'] - heizungs_dict['heizung_rl']
             if heizungs_dict['speicher_3_kopf'] < 35 and heizungs_dict['speicher_4_mitte'] < 30 and heizungs_dict['speicher_5_boden'] < 30:
-                if heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl'] <= 2:
+                if spread <= 2:
                     # if heizungs_dict['heizung_d'] == 0:
                     #if minutes_ago_since_now < 15: # only if messurements are not so long ago
                         start_kessel = "ON"
