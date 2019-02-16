@@ -4,7 +4,7 @@
 import simplejson
 import urllib2
 import datetime
-from time import gmtime, strftime, time
+from time import gmtime, strftime, time, sleep
 import platform
 from ConfigParser import SafeConfigParser
 import logging
@@ -273,7 +273,7 @@ def getMeasurementsFromUVR1611():
     and returns list of quadruples of id, name, value, unit of measurement
     """
     r = requests.get(
-        'http://heizung.fritz.box/580500.htm',
+        'http://' + blnet_host + "580500.htm",
     )
 
     # Parse  DOM object from HTMLCode
@@ -405,7 +405,7 @@ def main():
                 pushDataToHosting(data)
 
             except:
-                logmessage("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0])
+                logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
 
             # old way to transfer the data to uvr1611
             # Todo implement api call for new "data"
@@ -424,7 +424,7 @@ def main():
             seconds_processing = end - start
             to_sleep = 60 - seconds_processing
             if seconds_processing > 0:
-                time.sleep(to_sleep)  # sleeping time in seconds
+                sleep(to_sleep)  # sleeping time in seconds
 
 if __name__ == '__main__':
     main()
