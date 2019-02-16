@@ -327,6 +327,8 @@ def check_measurements(data=None):
 
     if data is None or len(data) == 0:
         data = getMeasurementsFromHttp()
+    else:
+        data = [data]
 
     start_kessel = "--"
     start_list = {}
@@ -415,6 +417,8 @@ def main():
                 else:
                     stop_kessel()
             elif operating_mode == 'pellets':
+                if check_measurements(data) == "ON":
+                    pass
                 pass
 
             end = time()
