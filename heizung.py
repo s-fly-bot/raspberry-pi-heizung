@@ -319,10 +319,11 @@ def getMeasurementsFromUVR1611():
 
     for values in data:
         result_dict[fields_dict_ein[values['id']]] = values['value']
+
     data = []
     for key in fields:
         if key == 'timestamp':
-            data.append(round(time()))
+            data.append(int(time()))
         else:
             value = result_dict[key]
             if isinstance(value, six.string_types):
@@ -395,7 +396,7 @@ def check_measurements(uvr_direct_data=None):
                   datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
                 , heizungs_dict['heizung_d']
                 , heizungs_dict['d_heizung_pumpe']
-                , heizungs_dict['heizung_vl']-heizungs_dict['heizung_rl']
+                , spread
                 , start_kessel
                 , minutes_ago_since_now
                 , l
