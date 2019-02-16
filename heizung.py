@@ -129,6 +129,7 @@ def logmessage(message):
 logmessage("+-----  S T A R T  ----------------------------------")
 logmessage("|   %r" % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 logmessage("+----------------------------------------------------")
+logmessage("| operation mode: ", operating_mode)
 
 
 def start_kessel():
@@ -433,6 +434,10 @@ def main():
                 else:
                     stop_kessel()
             elif operating_mode == 'pellets':
+                if check_measurements(data) == "ON":
+                    pass
+                else:
+                    pass
                 pass
             end = time()
 
