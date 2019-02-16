@@ -13,8 +13,8 @@ import sys, os
 from htmldom import htmldom
 import requests
 import re
-import html
-import json
+# import html
+# import json
 
 
 raspberry = False
@@ -23,11 +23,12 @@ if 'raspberrypi' in platform.uname():
     raspberry = True
     import RPi.GPIO as GPIO
 
-    RelaisHeizung = 23
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(False)
-    GPIO.setup(RelaisHeizung,  GPIO.OUT)
-    GPIO.output(RelaisHeizung,  GPIO.LOW)
+# gpio 23 = Pin 16
+RelaisHeizung = 23
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(RelaisHeizung,  GPIO.OUT)
+GPIO.output(RelaisHeizung,  GPIO.LOW)
 
 # Set up a specific logger with our desired output level
 _config_path = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -129,24 +130,35 @@ logmessage("+-----  S T A R T  ----------------------------------")
 logmessage("|   %r" % strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 logmessage("+----------------------------------------------------")
 
+
 def start_kessel():
+    """
+    closes the relay which start the wood gasifier in lumber mode
+    closes the relay which start/keep burning the wood gasifier in pellets mode
+    :return:
+    """
     message = ""
     if raspberry:
         GPIO.output(RelaisHeizung, GPIO.HIGH)
     else:
-        message = "...test...: "
+        message = "doing : "
     message += "START_KESSEL"
     logmessage(message)
 
 
 def stop_kessel():
+    """
+    stops burning in pellets mode, stop starting in lumber mode
+    :return:
+    """
     message = ""
     if raspberry:
         GPIO.output(RelaisHeizung, GPIO.LOW)
     else:
-        message = "...test...: "
+        message = "doing : "
     message += "STOP_KESSEL"
     logmessage(message)
+
 
 def getResonseResult(url):
     request = urllib2.Request(url)
@@ -154,6 +166,7 @@ def getResonseResult(url):
     response_result = response.read()
 
     return response_result
+
 
 def transferData():
     """
@@ -320,15 +333,15 @@ def getTimeDifferenceFromNow(timestamp):
     return int(timeDiff.total_seconds() / 60)
 
 
-def check_measurements(data=None):
+def check_measurements(uvr_direct_data=None):
     logmessage("-"*77)
     logmessage("------------- New Test on Measurements: %s -----------------" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     logmessage("-"*77)
 
-    if data is None or len(data) == 0:
+    if uvr_direct_data is None or len(uvr_direct_data) == 0:
         data = getMeasurementsFromHttp()
     else:
-        data = [data]
+        data = [uvr_direct_data]
 
     start_kessel = "--"
     start_list = {}
@@ -376,13 +389,17 @@ def check_measurements(data=None):
         logmessage("there is nothing to examine...")
     logmessage("-"*77)
 
-    # check if kessel start is necessary:
-    for minutes_ago_since_now, start in start_list.iteritems():
-        if minutes_ago_since_now < 20 and start == "ON":
-            start_kessel = "ON"
-            break
-        else:
-            start_kessel = "--"
+    # check if wood gasifier start is necessary:
+    if operating_mode == 'lumber':
+        for minutes_ago_since_now, start in start_list.iteritems():
+            if minutes_ago_since_now < 20 and start == "ON":
+                start_kessel = "ON"
+                break
+            else:
+                start_kessel = "--"
+    # check if wood gasifier should burn
+    elif operating_mode == 'pellets':
+        pass
 
     return start_kessel
 
@@ -392,7 +409,7 @@ def main():
         logmessage("Start burn-off per comandline...")
         start_kessel()
         logmessage("manually start done....")
-        time.sleep(5)
+        sleep(5)
         # better wait some time?
         stop_kessel()
 
@@ -402,13 +419,12 @@ def main():
             data=[]
             try:
                 data = getMeasurementsFromUVR1611()
-                pushDataToHosting(data)
+                # Todo: pushDataToHosting(data)
 
             except:
                 logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
 
             # old way to transfer the data to uvr1611
-            # Todo implement api call for new "data"
             transferData()
 
             if operating_mode == 'lumber':
@@ -417,10 +433,7 @@ def main():
                 else:
                     stop_kessel()
             elif operating_mode == 'pellets':
-                if check_measurements(data) == "ON":
-                    pass
                 pass
-
             end = time()
 
             seconds_processing = end - start
