@@ -191,9 +191,8 @@ def getMeasurementsFromHttp():
 
 def getMeasurementsFromUVR1611():
     # Ausgaenge / not only digital ones
-    r = requests.get(
-        'http://' + blnet_host + "/580600.htm",
-    )
+    url = "http://" + blnet_host + "/580600.htm"
+    r = requests.get(url)
 
     # Parse  DOM object from HTMLCode
     dom = htmldom.HtmlDom().createDom(r.text)
@@ -272,9 +271,8 @@ def getMeasurementsFromUVR1611():
     Reads all analog values (temperatures, speeds) from the web interface
     and returns list of quadruples of id, name, value, unit of measurement
     """
-    r = requests.get(
-        'http://' + blnet_host + "580500.htm",
-    )
+    url = "http://" + blnet_host + "/580500.htm"
+    r = requests.get(url)
 
     # Parse  DOM object from HTMLCode
     dom = htmldom.HtmlDom().createDom(r.text)
@@ -297,9 +295,9 @@ def getMeasurementsFromUVR1611():
         match_dict = match.groupdict()
         # convert html entities to unicode characters
         for key in match_dict.keys():
-            match_dict[key] = html.unescape(match_dict[key])
+            # match_dict[key] = html.unescape(match_dict[key])
             # also replace decimal "," by "."
-            match_dict[key] = match_dict[key].replace(",", ".")
+            match_dict[key] = match_dict[key].replace(",", ".").replace('&nbsp;','')
         # and append formatted dict
         data.append(match_dict)
         match = next(match_iter, False)
