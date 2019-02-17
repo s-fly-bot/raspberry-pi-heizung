@@ -10,10 +10,6 @@ from ConfigParser import SafeConfigParser
 import logging
 from logging import config
 import sys, os
-from htmldom import htmldom
-import requests
-import re
-import six
 from ta.get_measurements import getMeasurementsFromUVR1611
 from ta.fieldlists import fields
 # import html
