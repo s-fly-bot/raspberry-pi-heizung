@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import simplejson
@@ -14,6 +14,8 @@ from htmldom import htmldom
 import requests
 import re
 import six
+from ta.get_measurements import getMeasurementsFromUVR1611
+from ta.fieldlists import fields
 # import html
 # import json
 
@@ -24,12 +26,12 @@ if 'raspberrypi' in platform.uname():
     raspberry = True
     import RPi.GPIO as GPIO
 
-# gpio 23 = Pin 16
-RelaisHeizung = 23
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-GPIO.setup(RelaisHeizung,  GPIO.OUT)
-GPIO.output(RelaisHeizung,  GPIO.LOW)
+    # gpio 4 = BCM 23 = Pin 16
+    RelaisHeizung = 23
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    GPIO.setup(RelaisHeizung,  GPIO.OUT)
+    GPIO.output(RelaisHeizung,  GPIO.LOW)
 
 # Set up a specific logger with our desired output level
 _config_path = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -41,10 +43,10 @@ print("config logger : ", _config_logger)
 
 parser = SafeConfigParser()
 parser.read(_config_file)
-url = parser.get('heizung', 'url')
-url_internal = parser.get('heizung', 'url_internal')
-blnet_host = parser.get('heizung', 'blnet_host')
-operating_mode = parser.get('heizung', 'operating_mode')
+url             = parser.get('heizung', 'url')
+url_internal    = parser.get('heizung', 'url_internal')
+blnet_host      = parser.get('heizung', 'blnet_host')
+operating_mode  = parser.get('heizung', 'operating_mode')
 
 log2log = parser.get('heizung', 'logger')
 
@@ -53,72 +55,6 @@ print("print2logger  : ", log2log)
 logging.config.fileConfig(_config_logger)
 logger = logging.getLogger('heizung')
 logger.propagate = False
-
-fields = [
-### ANALOG ####
-    'timestamp',
-    'kessel_rl',
-    'kessel_d_ladepumpe',
-    'kessel_betriebstemperatur',
-    'speicher_ladeleitung',
-    'aussentemperatur',
-    'raum_rasp',
-    'speicher_1_kopf',
-    'speicher_2_kopf',
-    'speicher_3_kopf',
-    'speicher_4_mitte',
-    'speicher_5_boden',
-    'heizung_vl',
-    'heizung_rl',
-    'heizung_d',
-    'solar_strahlung',
-    'solar_vl',
-    'solar_d_ladepumpe',
-
-### DIGITAL ####
-    'd_heizung_pumpe',
-    'd_kessel_ladepumpe',
-    'd_kessel_freigabe',
-    'd_heizung_mischer_auf',
-    'd_heizung_mischer_zu',
-    'd_kessel_mischer_auf',
-    'd_kessel_mischer_zu',
-    'd_solar_kreispumpe',
-    'd_solar_ladepumpe',
-    'd_solar_freigabepumpe']
-
-fields_dict_ein = {
-### ANALOG ####
-    '9': 'kessel_rl',
-    '7': 'kessel_betriebstemperatur',
-    '6': 'speicher_ladeleitung',
-    '1': 'aussentemperatur',
-    '8': 'raum_rasp',
-    '2': 'speicher_1_kopf',
-    '3': 'speicher_2_kopf',
-    '4': 'speicher_3_kopf',
-    '16': 'speicher_4_mitte',
-    '5': 'speicher_5_boden',
-    '10': 'heizung_vl',
-    '11': 'heizung_rl',
-    '15': 'solar_strahlung',
-    '13': 'solar_vl'
-}
-
-fields_dict_aus = {
-    '2:speed': 'kessel_d_ladepumpe',
-    '6:speed': 'heizung_d',
-    '7:speed': 'solar_d_ladepumpe',
-    '6': 'd_heizung_pumpe',
-    '2': 'd_kessel_ladepumpe',
-    '5': 'd_kessel_freigabe',
-    '10': 'd_heizung_mischer_auf',
-    '11': 'd_heizung_mischer_zu',
-    '8': 'd_kessel_mischer_auf',
-    '9': 'd_kessel_mischer_zu',
-    '4': 'd_solar_kreispumpe',
-    '3': 'd_solar_ladepumpe',
-    '7': 'd_solar_freigabepumpe'}
 
 
 def logmessage(message):
@@ -135,7 +71,7 @@ logmessage("| operation mode: %s" % operating_mode)
 
 def start_kessel():
     """
-    closes the relay which start the wood gasifier in lumber mode
+    closes the relay which start the wood gasifier in firewood mode
     closes the relay which start/keep burning the wood gasifier in pellets mode
     :return:
     """
@@ -150,7 +86,7 @@ def start_kessel():
 
 def stop_kessel():
     """
-    stops burning in pellets mode, stop starting in lumber mode
+    stops burning in pellets mode, stop starting in firewood mode
     :return:
     """
     message = ""
@@ -196,146 +132,6 @@ def transferData():
     logmessage('+----------------- transfer done -------------------------------------')
 
 
-def getMeasurementsFromHttp():
-    response = getResonseResult(url)
-    data = ''
-    if response:
-        data = simplejson.loads(response)[-20:]
-    return data
-
-
-def getMeasurementsFromUVR1611():
-    # Ausgaenge / not only digital ones
-    url = "http://" + blnet_host + "/580600.htm"
-    r = requests.get(url)
-
-    # Parse  DOM object from HTMLCode
-    dom = htmldom.HtmlDom().createDom(r.text)
-    # get the element containing the interesting information
-    dom = dom.find("div.c")[1]
-
-    # filter out the text
-    raw = dom.text().replace('&nbsp;', '')
-
-    # build sections by id
-    sections=[]
-    section=[]
-    for line in raw.split("\n"):
-        if not line:
-            continue
-        if line[0].isdigit():
-            if section:
-                # sections.append("\n".join(section))
-                sections.append(section)
-                section=[]
-        section.append(line)
-
-    sections.append("\n".join(section))  # grab the last one
-
-    sections = sections[1:11]
-
-    ausgaenge_dict = {}
-    raw_ausgaenge_dict = {}
-
-    regex_speed      = re.compile('Drehzahlst.:(?P<speed>\d+)')
-    regex_mode_value = re.compile('(?P<mode>(AUTO|HAND))/(?P<value>(AUS|EIN))')
-    regex_auf_zu     = re.compile('(?P<mode>(auf|zu)):(?P<value>(AUS|EIN))')
-
-    for num, section in enumerate(sections):
-        #  print(num, '=' * 50)
-        first_line = True
-        speed = None
-        mode = None
-        value = None
-        for line in section:
-            if first_line:
-                # print("line : ", line)
-                id, name = line.split(':', 1)
-                first_line = False
-            if int(id) < 8:
-                match = regex_mode_value.search(line)
-                if match:
-                    # print(match.groups())
-                    mode = match.group('mode')
-                    value = match.group('value')
-            else:
-                match = regex_auf_zu.search(line)
-                if match:
-                    # print(match.groups())
-                    mode = match.group('mode')
-                    value = match.group('value')
-
-            if int(id) in [2 , 6, 7]:
-                match = regex_speed.search(line)
-                if match:
-                    speed=match.group('speed')
-
-        raw_ausgaenge_dict[id]={'id': id, 'name': name, 'mode': mode, 'value': value, 'speed': speed}
-
-    result_dict={}
-    for id in raw_ausgaenge_dict.keys():
-        if int(id) in [2, 6, 7]:
-            result_dict[fields_dict_aus[id+':speed']] = raw_ausgaenge_dict[id]['speed']
-        if raw_ausgaenge_dict[id]['value'] == 'AUS':
-            value = 0
-        else:
-            value = 1
-        result_dict[fields_dict_aus[id]] = value
-
-    """
-    Reads all analog values (temperatures, speeds) from the web interface
-    and returns list of quadruples of id, name, value, unit of measurement
-    """
-    url = "http://" + blnet_host + "/580500.htm"
-    r = requests.get(url)
-
-    # Parse  DOM object from HTMLCode
-    dom = htmldom.HtmlDom().createDom(r.text)
-    # get the element containing the interesting information
-    dom = dom.find("div.c")[1]
-    # filter out the text
-    data_raw = dom.text()
-
-    # collect data in an array
-    data = list()
-
-    # search for data by regular expression
-    match_iter = re.finditer(
-        "(?P<id>\d+):&nbsp;(?P<name>.+)\n" +
-        "(&nbsp;){3,6}(?P<value>[^ ]+) " +
-        "(?P<unit_of_measurement>.+?)&nbsp;&nbsp;PAR?", data_raw)
-    match = next(match_iter, False)
-    # parse a dict of the match and save them all in a list
-    while match:
-        match_dict = match.groupdict()
-        # convert html entities to unicode characters
-        for key in match_dict.keys():
-            # Todo this works only in py3 match_dict[key] = html.unescape(match_dict[key])
-            # also replace decimal "," by "."
-            match_dict[key] = match_dict[key].replace(",", ".").replace('&nbsp;', '')
-        # and append formatted dict
-        data.append(match_dict)
-        match = next(match_iter, False)
-
-    for values in data:
-        result_dict[fields_dict_ein[values['id']]] = values['value']
-
-    data = []
-    for key in fields:
-        if key == 'timestamp':
-            data.append(int(time()))
-        else:
-            value = result_dict[key]
-            if isinstance(value, six.string_types):
-                # It's a string !!
-                if '.' in value:
-                    value = float(result_dict[key])
-                else:
-                    value = int(result_dict[key])
-            data.append(value)
-
-    return data, result_dict
-
 def pushDataToHosting(data):
     """
     Will send data to uvr1611 api to hosting server
@@ -343,6 +139,15 @@ def pushDataToHosting(data):
     :return:
     """
     pass
+
+
+def getMeasurementsFromHttp():
+    response = getResonseResult(url)
+    data = ''
+    if response:
+        data = simplejson.loads(response)[-20:]
+    return data
+
 
 def getTimeDifferenceFromNow(timestamp):
     """ :return minutes from now """
@@ -407,7 +212,7 @@ def check_measurements(uvr_direct_data=None):
     logmessage("-"*77)
 
     # check if wood gasifier start is necessary:
-    if operating_mode == 'lumber':
+    if operating_mode == 'firewood':
         for minutes_ago_since_now, start in start_list.iteritems():
             if minutes_ago_since_now < 20 and start == "ON":
                 start_kessel = "ON"
@@ -422,6 +227,9 @@ def check_measurements(uvr_direct_data=None):
 
 
 def main():
+    blnet = getMeasurementsFromUVR1611(blnet_host, timeout=5, password=None)
+    blnet.log_in()
+
     if len(sys.argv) > 1 and sys.argv[1] == 'ON':
         logmessage("Start burn-off per comandline...")
         start_kessel()
@@ -433,18 +241,19 @@ def main():
     else:
         while True:
             start = time()
-            data=[]
-            try:
-                data, result_dict = getMeasurementsFromUVR1611()
+            data = []
+            # try:
+            data, result_dict = blnet.get_measurements()
                 # Todo: pushDataToHosting(data)
 
-            except:
-                logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
+            #except:
+            #    logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
 
             # old way to transfer the data to uvr1611
-            transferData()
+            if raspberry:
+                transferData()
 
-            if operating_mode == 'lumber':
+            if operating_mode == 'firewood':
                 if check_measurements(data) == "ON":
                     start_kessel()
                 else:
