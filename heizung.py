@@ -65,7 +65,7 @@ logmessage("+----------------------------------------------------")
 logmessage("| operation mode: %s" % operating_mode)
 
 
-def start_kessel():
+def start_firing():
     """
     closes the relay which start the wood gasifier in firewood mode
     closes the relay which start/keep burning the wood gasifier in pellets mode
@@ -80,7 +80,7 @@ def start_kessel():
     logmessage(message)
 
 
-def stop_kessel():
+def stop_firing():
     """
     stops burning in pellets mode, stop starting in firewood mode
     :return:
@@ -161,8 +161,8 @@ def check_measurements(uvr_direct_data=None):
     else:
         data = [uvr_direct_data]
 
-    start_kessel = "--"
-    start_list = {}
+    do_firing = "OFF"
+    start_list = []
 
     try:
         heizungs_dict = dict(zip(fields, data[-1]))
@@ -176,29 +176,39 @@ def check_measurements(uvr_direct_data=None):
         for l in data:
             heizungs_dict = dict(zip(fields, l))
             minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
-            start_kessel = "--"
+            do_firing = "--"
             spread = heizungs_dict['heizung_vl'] - heizungs_dict['heizung_rl']
-            if heizungs_dict['speicher_3_kopf'] < 35 and heizungs_dict['speicher_4_mitte'] < 30 and heizungs_dict['speicher_5_boden'] < 30:
-                if spread <= 2:
+
+            if heizungs_dict['speicher_3_kopf'] < 29 \
+                    and heizungs_dict['speicher_4_mitte'] < 29 \
+                    and heizungs_dict['speicher_5_boden'] < 29:
+                do_firing = "ON"
+
+            elif heizungs_dict['speicher_3_kopf'] < 35 \
+                    and heizungs_dict['speicher_4_mitte'] < 30 \
+                    and heizungs_dict['speicher_5_boden'] < 30 \
+                    and spread <= 2:
                     # if heizungs_dict['heizung_d'] == 0:
                     #if minutes_ago_since_now < 15: # only if messurements are not so long ago
-                        start_kessel = "ON"
+                        do_firing = "ON"
 
-            if heizungs_dict['speicher_3_kopf'] < 29 and heizungs_dict['speicher_4_mitte'] < 29 and heizungs_dict['speicher_5_boden'] < 29:
-                start_kessel = "ON"
+            if heizungs_dict['speicher_5_boden'] > 75:
+                do_firing = "OFF"
 
-            # but if solar rediation is going up..*[]:
+            # for a very sunny day exeception should be made here:
             # be optimistic that enough hot water will be produced
-            # TODO
-            # start_kessel = "--"
+            if heizungs_dict['solar_strahlung'] > 400:
+                do_firing = "OFF"
 
-            start_list[minutes_ago_since_now]=start_kessel
+            if minutes_ago_since_now < 20:
+                start_list.append(do_firing)
+
             logmessage("%r %r %r %.1f %r %r %r" % (
                   datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
                 , heizungs_dict['heizung_d']
                 , heizungs_dict['d_heizung_pumpe']
                 , spread
-                , start_kessel
+                , do_firing
                 , minutes_ago_since_now
                 , l
             ))
@@ -208,57 +218,74 @@ def check_measurements(uvr_direct_data=None):
     logmessage("-"*77)
 
     # check if wood gasifier start is necessary:
-    if operating_mode == 'firewood':
-        for minutes_ago_since_now, start in start_list.iteritems():
-            if minutes_ago_since_now < 20 and start == "ON":
-                start_kessel = "ON"
-                break
-            else:
-                start_kessel = "--"
-    # check if wood gasifier should burn
-    elif operating_mode == 'pellets':
-        pass
+    if "OFF" in start_list or not start_list:
+        do_firing = "OFF"
+    elif "ON" in start_list:
+        do_firing = "ON"
+    else:
+        do_firing = "--"
 
-    return start_kessel
+    return do_firing
 
 
 def main():
     blnet = getMeasurementsFromUVR1611(blnet_host, timeout=5, password=None)
     blnet.log_in()
 
+    firing_start = None
+
+    # for secure reason stop when started
+    stop_firing()
+
+    # this is only for operating_mode firewood!
     if len(sys.argv) > 1 and sys.argv[1] == 'ON':
         logmessage("Start burn-off per comandline...")
-        start_kessel()
+        start_firing()
         logmessage("manually start done....")
         sleep(5)
         # better wait some time?
-        stop_kessel()
+        stop_firing()
 
     else:
         while True:
             start = time()
             data = []
-            # try:
-            data, result_dict = blnet.get_measurements()
+            try:
+                data, result_dict = blnet.get_measurements()
                 # Todo: pushDataToHosting(data)
 
-            #except:
-            #    logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
+            except:
+                logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
 
             # old way to transfer the data to uvr1611
             if raspberry:
                 transferData()
 
+            result = check_measurements(data)
+
             if operating_mode == 'firewood':
-                if check_measurements(data) == "ON":
-                    start_kessel()
+                if result == "ON":
+                    start_firing()
                 else:
-                    stop_kessel()
+                    stop_firing()
+
             elif operating_mode == 'pellets':
-                if check_measurements(data) == "ON":
+                if result == "ON":
+                    if firing_start is None:
+                        firing_start = time()
+                        start_firing()
+                elif result == 'OFF':
+                    stop_firing()
+
+                    if firing_start:
+                        firing_start = None
+
+                        message = "combustion time: %r hours" % (firing_start - time())/3600
+                        logmessage(message)
                     pass
-                else:
+                else: # result == '--'
                     pass
+
                 pass
             end = time()
 
