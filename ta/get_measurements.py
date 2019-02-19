@@ -9,6 +9,7 @@ import six
 class getMeasurementsFromUVR1611(BLNETWeb):
     def __init__(self, blnet_host, timeout=5, password=None):
         BLNETWeb.__init__(self, blnet_host, timeout=timeout, password=password)
+        self.current_taid = 'TAID="5000"'
 
     def get_measurements(self):
         # ensure to be logged in
