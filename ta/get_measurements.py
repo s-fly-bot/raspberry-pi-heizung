@@ -7,8 +7,9 @@ from fieldlists import fields, fields_dict_aus, fields_dict_ein
 import six
 
 class getMeasurementsFromUVR1611(BLNETWeb):
-    def __init__(self, blnet_host, timeout=5, password=None):
+    def __init__(self, blnet_host, node=62, timeout=5, password=None):
         BLNETWeb.__init__(self, blnet_host, timeout=timeout, password=password)
+        self.node = node
 
     def get_measurements(self):
         # ensure to be logged in
@@ -176,8 +177,9 @@ class getMeasurementsFromUVR1611(BLNETWeb):
             return False
 
         self.current_taid = r.headers.get('Set-Cookie')
-        return True
+        self.set_node(self.node)
 
+        return True
 
 
     def set_node(self, node):
@@ -187,9 +189,6 @@ class getMeasurementsFromUVR1611(BLNETWeb):
 
         Return: Still logged in (indicating successful node change)
         """
-        # ensure to be logged in
-        if not self.log_in():
-            return False
 
         # send the request to change the node
         try:
