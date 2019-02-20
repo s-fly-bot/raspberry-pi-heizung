@@ -9,7 +9,6 @@ import six
 class getMeasurementsFromUVR1611(BLNETWeb):
     def __init__(self, blnet_host, timeout=5, password=None):
         BLNETWeb.__init__(self, blnet_host, timeout=timeout, password=password)
-        self.current_taid = 'TAID="5000"'
 
     def get_measurements(self):
         # ensure to be logged in
@@ -23,6 +22,7 @@ class getMeasurementsFromUVR1611(BLNETWeb):
                 headers=self.cookie_header(),
                 timeout=self._timeout)
         except requests.exceptions.RequestException:
+            self.current_taid = ""
             return None
 
         # Parse  DOM object from HTMLCode
@@ -108,6 +108,7 @@ class getMeasurementsFromUVR1611(BLNETWeb):
                 headers=self.cookie_header(),
                 timeout=self._timeout)
         except requests.exceptions.RequestException:
+            self.current_taid = ""
             return None
 
         # Parse  DOM object from HTMLCode
@@ -156,3 +157,48 @@ class getMeasurementsFromUVR1611(BLNETWeb):
                 data.append(value)
 
         return data, result_dict
+
+    def log_in(self):
+        """
+        Logs into the BLNET interface, renews the TAID
+
+        Return: Login successful
+        """
+        if self.current_taid:
+            return True
+
+        try:
+            r = requests.get(
+                self.ip + "/can.htm?blaB=1",
+                headers=self.cookie_header(),
+                timeout=self._timeout)
+        except requests.exceptions.RequestException:
+            return False
+
+        self.current_taid = r.headers.get('Set-Cookie')
+        return True
+
+
+
+    def set_node(self, node):
+        """
+        Selects the node at which the UVR of interest lies
+        future requests will be sent at this particular UVR
+
+        Return: Still logged in (indicating successful node change)
+        """
+        # ensure to be logged in
+        if not self.log_in():
+            return False
+
+        # send the request to change the node
+        try:
+            r = requests.get(
+                self.ip + "/can.htm?blaA=" + str(node),
+                headers=self.cookie_header(),
+                timeout=self._timeout)
+        except requests.exceptions.RequestException:
+            self.current_taid = ""
+            return False
+        # return whether we we're still logged in => setting went well
+        return self.password is None or r.headers.get('Set-Cookie') is not None
