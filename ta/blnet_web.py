@@ -60,7 +60,7 @@ class BLNETWeb(object):
         """
         assert (isinstance(ip, str))
         assert (password is None or isinstance(password, str))
-        assert (timeout is None or isinstance(timeout, int))
+        # assert (timeout is None or isinstance(timeout, int))
         if not ip.startswith("http://") and not ip.startswith("https://"):
             ip = "http://" + ip
         if not test_blnet(ip):

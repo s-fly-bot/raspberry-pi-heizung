@@ -229,7 +229,7 @@ def check_measurements(uvr_direct_data=None):
 
 
 def main():
-    blnet = getMeasurementsFromUVR1611(blnet_host, timeout=10, password=None)
+    blnet = getMeasurementsFromUVR1611(blnet_host, timeout=(3.05, 5), password=None)
     # blnet.log_in() is in set_node implicit
     blnet.set_node(62)
 
