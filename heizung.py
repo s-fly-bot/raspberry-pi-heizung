@@ -229,7 +229,7 @@ def check_measurements(uvr_direct_data=None):
 
 
 def main():
-    blnet = getMeasurementsFromUVR1611(blnet_host, timeout=(3.05, 5), password=None)
+    # blnet = getMeasurementsFromUVR1611(blnet_host, timeout=(3.05, 5), password=None)
 
     firing_start = None
 
@@ -250,16 +250,16 @@ def main():
             start = time()
             data = []
 
-            try:
-                data, result_dict = blnet.get_measurements()
-                # Todo: pushDataToHosting(data)
-
-            except:
-                logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
-                try:
-                    blnet.log_in()
-                except:
-                    pass
+            # try:
+            #     data, result_dict = blnet.get_measurements()
+            #     # Todo: pushDataToHosting(data)
+            #
+            # except:
+            #     logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
+            #     try:
+            #         blnet.log_in()
+            #     except:
+            #         pass
 
             # old way to transfer the data to uvr1611
             if raspberry:
