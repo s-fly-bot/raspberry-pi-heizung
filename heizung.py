@@ -236,8 +236,7 @@ def check_measurements(uvr_direct_data=None):
         # empty list
         pass
     logmessage("mean solar  : %r (%r)" % (mean_solar, solar_list))
-    logmessage("start_list  : %r" % start_list)
-    logmessage("start_firing: %s" % return_do_firing)
+    logmessage("start_firing: %s (%r)" % (return_do_firing, start_list))
     logmessage("-" * 77)
 
     return return_do_firing
