@@ -299,7 +299,7 @@ def main():
                     if firing_start:
                         firing_start = None
 
-                        message = "combustion time: %r hours" % (firing_start - time())/3600
+                        message = "combustion time: %r hours" % (round((time() - firing_start)/3600, 1))
                         logmessage(message)
                     pass
                 else: # result == '--'
