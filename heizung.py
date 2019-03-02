@@ -161,8 +161,9 @@ def check_measurements(uvr_direct_data=None):
     else:
         data = [uvr_direct_data]
 
-    do_firing = "OFF"
+    return_do_firing = "OFF" # default
     start_list = []
+    solar_list = []
 
     try:
         heizungs_dict = dict(zip(fields, data[-1]))
@@ -175,6 +176,7 @@ def check_measurements(uvr_direct_data=None):
 
         for l in data:
             heizungs_dict = dict(zip(fields, l))
+
             minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
             do_firing = "--"
             spread = heizungs_dict['heizung_vl'] - heizungs_dict['heizung_rl']
@@ -190,18 +192,15 @@ def check_measurements(uvr_direct_data=None):
                     and spread <= 2:
                     # if heizungs_dict['heizung_d'] == 0:
                     #if minutes_ago_since_now < 15: # only if messurements are not so long ago
-                        do_firing = "ON"
+                do_firing = "ON"
 
-            if heizungs_dict['speicher_5_boden'] > 75:
+            # this is enough energy!
+            if heizungs_dict['speicher_5_boden'] > 70:
                 do_firing = "OFF"
 
-            # for a very sunny day exeception should be made here:
-            # be optimistic that enough hot water will be produced
-            if heizungs_dict['solar_strahlung'] > 400:
-                do_firing = "OFF"
-
-            if minutes_ago_since_now < 20:
+            if minutes_ago_since_now < 30:
                 start_list.append(do_firing)
+                solar_list.append(heizungs_dict['solar_strahlung'])
 
             logmessage("%r %r %r %.1f %r %r %r" % (
                   datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
@@ -219,13 +218,29 @@ def check_measurements(uvr_direct_data=None):
 
     # check if wood gasifier start is necessary:
     if "OFF" in start_list or not start_list:
-        do_firing = "OFF"
+        return_do_firing = "OFF"
     elif "ON" in start_list:
-        do_firing = "ON"
+        return_do_firing = "ON"
     else:
-        do_firing = "--"
+        return_do_firing = "--"
 
-    return do_firing
+    # for a very sunny day exeception should be made here:
+    # be optimistic that enough hot water will be produced
+    # if the mean of the solar radiation values is big enough, shut off firing
+    mean_solar = 0
+    try:
+        mean_solar = sum(solar_list)/len(solar_list)
+        if mean_solar > 400:
+            return_do_firing = "OFF"
+    except ZeroDivisionError:
+        # empty list
+        pass
+    logmessage("mean solar  : %r (%r)" % (mean_solar, solar_list))
+    logmessage("start_list  : %r" % start_list)
+    logmessage("start_firing: %s" % return_do_firing)
+    logmessage("-" * 77)
+
+    return return_do_firing
 
 
 def main():
@@ -277,7 +292,7 @@ def main():
                 if result == "ON":
                     if firing_start is None:
                         firing_start = time()
-                        # start_firing()
+                        start_firing()
                 elif result == 'OFF':
                     stop_firing()
 
@@ -294,7 +309,7 @@ def main():
             end = time()
 
             seconds_processing = end - start
-            to_sleep = 60 - seconds_processing
+            to_sleep = 120 - seconds_processing
             if seconds_processing > 0:
                 sleep(to_sleep)  # sleeping time in seconds
 
