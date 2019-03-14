@@ -65,252 +65,245 @@ logmessage("+----------------------------------------------------")
 logmessage("| operation mode: %s" % operating_mode)
 
 
-def start_firing():
-    """
-    closes the relay which start the wood gasifier in firewood mode
-    closes the relay which start/keep burning the wood gasifier in pellets mode
-    :return:
-    """
-    message = ""
-    if raspberry:
-        GPIO.output(RelaisHeizung, GPIO.HIGH)
-    else:
-        message = "doing : "
-    message += "START_KESSEL"
-    logmessage(message)
-
-
-def stop_firing():
-    """
-    stops burning in pellets mode, stop starting in firewood mode
-    :return:
-    """
-    message = ""
-    if raspberry:
-        GPIO.output(RelaisHeizung, GPIO.LOW)
-    else:
-        message = "doing : "
-    message += "STOP_KESSEL"
-    logmessage(message)
-
-
-def getResonseResult(url):
-    request = urllib2.Request(url)
-    response = urllib2.urlopen(request, timeout=30)
-    response_result = response.read()
-
-    return response_result
-
-
-def transferData():
-    """
-    This method transfers the data from uvr1611 to the api of same project to hosting server
-    """
-    logmessage('+------------------ transfer data from uvr1611 ------------------------')
-    try:
-        if raspberry:
-#            response = urllib.urlopen(url_internal)
-#            data = response.read()
-
-            data = getResonseResult(url_internal)
-
-            if data == "[]":
-                message = "| OK: []"
-            else:
-                message = "| response is not what expected"
-        else:
-            message="| i'm not on raspberry..."
-        logmessage(message)
-
-    except:
-        logger.error("| something went wrong while retrieving from %s" % url_internal)
-
-    logmessage('+----------------- transfer done -------------------------------------')
-
-
-def pushDataToHosting(data):
-    """
-    Will send data to uvr1611 api to hosting server
-    :param data:
-    :return:
-    """
-    pass
-
-
-def getMeasurementsFromHttp():
-    response = getResonseResult(url)
-    data = ''
-    if response:
-        data = simplejson.loads(response)[-20:]
-    return data
-
-
 def getTimeDifferenceFromNow(timestamp):
     """ :return minutes from now """
     timeDiff = datetime.datetime.now() - datetime.datetime.fromtimestamp(timestamp)
     return int(timeDiff.total_seconds() / 60)
 
 
-def check_measurements(uvr_direct_data=None):
-    logmessage("-"*77)
-    logmessage("------------- New Test on Measurements: %s -----------------" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    logmessage("-"*77)
+class heating(object):
+    def __init__(self):
+        self.start_fireing = None
 
-    if uvr_direct_data is None or len(uvr_direct_data) == 0:
-        data = getMeasurementsFromHttp()
-    else:
-        data = [uvr_direct_data]
-
-    return_do_firing = "OFF" # default
-    start_list = []
-    solar_list = []
-
-    try:
-        heizungs_dict = dict(zip(fields, data[-1]))
-        for key, val in sorted(heizungs_dict.items()):
-            logmessage('  {0:25} : {1:}'.format(key, val))
-        logmessage('  {0:25} : {1:}'.format('datetime',
-                                        datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
-                                            '%Y-%m-%d %H:%M:%S')))
-        logmessage("-"*77)
-
-        for l in data:
-            heizungs_dict = dict(zip(fields, l))
-
-            minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
-            do_firing = "--"
-            spread = heizungs_dict['heizung_vl'] - heizungs_dict['heizung_rl']
-
-            if heizungs_dict['speicher_3_kopf'] < 29 \
-                    and heizungs_dict['speicher_4_mitte'] < 29 \
-                    and heizungs_dict['speicher_5_boden'] < 29:
-                do_firing = "ON"
-
-            elif heizungs_dict['speicher_3_kopf'] < 35 \
-                    and heizungs_dict['speicher_4_mitte'] < 30 \
-                    and heizungs_dict['speicher_5_boden'] < 30 \
-                    and spread <= 2:
-                    # if heizungs_dict['heizung_d'] == 0:
-                    #if minutes_ago_since_now < 15: # only if messurements are not so long ago
-                do_firing = "ON"
-
-            # this is enough energy!
-            if heizungs_dict['speicher_5_boden'] > 70:
-                do_firing = "OFF"
-
-            if minutes_ago_since_now < 30:
-                start_list.append(do_firing)
-                solar_list.append(heizungs_dict['solar_strahlung'])
-
-            logmessage("%r %r %r %.1f %r %r %r" % (
-                  datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
-                , heizungs_dict['heizung_d']
-                , heizungs_dict['d_heizung_pumpe']
-                , spread
-                , do_firing
-                , minutes_ago_since_now
-                , l
-            ))
-    except IndexError:
-        logmessage("-"*77)
-        logmessage("there is nothing to examine...")
-    logmessage("-"*77)
-
-    # check if wood gasifier start is necessary:
-    if "OFF" in start_list or not start_list:
-        return_do_firing = "OFF"
-    elif "ON" in start_list:
-        return_do_firing = "ON"
-    else:
-        return_do_firing = "--"
-
-    # for a very sunny day exeception should be made here:
-    # be optimistic that enough hot water will be produced
-    # if the mean of the solar radiation values is big enough, shut off firing
-    mean_solar = 0
-    try:
-        mean_solar = sum(solar_list)/len(solar_list)
-        if mean_solar > 400:
-            return_do_firing = "OFF"
-    except ZeroDivisionError:
-        # empty list
-        pass
-    logmessage("mean solar  : %r (%r)" % (mean_solar, solar_list))
-    logmessage("start_firing: %s (%r)" % (return_do_firing, start_list))
-    logmessage("-" * 77)
-
-    return return_do_firing
+    def start_firing(self):
+        """
+        closes the relay which start the wood gasifier in firewood mode
+        closes the relay which start/keep burning the wood gasifier in pellets mode
+        :return:
+        """
+        message = ""
+        if raspberry:
+            GPIO.output(RelaisHeizung, GPIO.HIGH)
+        else:
+            message = "doing : "
+        message += "START_KESSEL"
+        logmessage(message)
 
 
-def main():
-    # blnet = getMeasurementsFromUVR1611(blnet_host, timeout=(3.05, 5), password=None)
+    def stop_firing(self):
+        """
+        stops burning in pellets mode, stop starting in firewood mode
+        :return:
+        """
+        message = ""
+        if raspberry:
+            GPIO.output(RelaisHeizung, GPIO.LOW)
+        else:
+            message = "doing : "
+        message += "STOP_KESSEL"
+        logmessage(message)
 
-    firing_start = None
 
-    # for secure reason stop when started
-    stop_firing()
+    def getResonseResult(self, url):
+        request = urllib2.Request(url)
+        response = urllib2.urlopen(request, timeout=30)
+        response_result = response.read()
 
-    # this is only for operating_mode firewood!
-    if len(sys.argv) > 1 and sys.argv[1] == 'ON':
-        logmessage("Start burn-off per comandline...")
-        start_firing()
-        logmessage("manually start done....")
-        sleep(5)
-        # better wait some time?
-        stop_firing()
+        return response_result
 
-    else:
-        while True:
-            start = time()
-            data = []
 
-            # try:
-            #     data, result_dict = blnet.get_measurements()
-            #     # Todo: pushDataToHosting(data)
-            #
-            # except:
-            #     logmessage(("Unexpected error in getMeasurementsFromUVR1611(): ", sys.exc_info()[0]))
-            #     try:
-            #         blnet.log_in()
-            #     except:
-            #         pass
-
-            # old way to transfer the data to uvr1611
+    def transferData(self):
+        """
+        This method transfers the data from uvr1611 to the api of same project to hosting server
+        """
+        logmessage('+------------------ transfer data from uvr1611 ------------------------')
+        try:
             if raspberry:
-                transferData()
+    #            response = urllib.urlopen(url_internal)
+    #            data = response.read()
 
-            result = check_measurements(data)
+                data = self.getResonseResult(url_internal)
 
-            if operating_mode == 'firewood':
-                if result == "ON":
-                    start_firing()
+                if data == "[]":
+                    message = "| OK: []"
                 else:
-                    stop_firing()
+                    message = "| response is not what expected"
+            else:
+                message="| i'm not on raspberry..."
+            logmessage(message)
 
-            elif operating_mode == 'pellets':
-                if result == "ON":
-                    if firing_start is None:
-                        firing_start = time()
-                        start_firing()
-                elif result == 'OFF':
-                    stop_firing()
+        except:
+            logger.error("| something went wrong while retrieving from %s" % url_internal)
 
-                    if firing_start:
-                        firing_start = None
+        logmessage('+----------------- transfer done -------------------------------------')
 
-                        message = "combustion time: %r hours" % (round((time() - firing_start)/3600, 1))
-                        logmessage(message)
-                    pass
-                else: # result == '--'
-                    pass
 
-                pass
-            end = time()
+    def pushDataToHosting(self, data):
+        """
+        Will send data to uvr1611 api to hosting server
+        :param data:
+        :return:
+        """
+        pass
 
-            seconds_processing = end - start
-            to_sleep = 120 - seconds_processing
-            if seconds_processing > 0:
-                sleep(to_sleep)  # sleeping time in seconds
+
+    def getMeasurementsFromHttp(self):
+        response = self.getResonseResult(url)
+        data = ''
+        if response:
+            data = simplejson.loads(response)[-20:]
+        return data
+
+    def check_measurements(self, uvr_direct_data=None):
+        logmessage("-"*77)
+        dt_now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        logmessage("------------- New Test on Measurements: %s -----------------" % dt_now)
+        logmessage("-"*77)
+
+        if uvr_direct_data is None or len(uvr_direct_data) == 0:
+            data = self.getMeasurementsFromHttp()
+        else:
+            data = [uvr_direct_data]
+
+        # exceptions if it is between 0:00 and 0:10!
+        return_do_firing = "OFF"  # default
+        if int(strftime("%H")) == 0 and int(strftime("%M")) <= 10:
+            return_do_firing = "--"  # no values available :(
+            # Todo build an api for last 30 Minutes values!
+
+        start_list = []
+        solar_list = []
+
+        try:
+            heizungs_dict = dict(zip(fields, data[-1]))
+            for key, val in sorted(heizungs_dict.items()):
+                logmessage('  {0:25} : {1:}'.format(key, val))
+            logmessage('  {0:25} : {1:}'.format('datetime',
+                                            datetime.datetime.fromtimestamp(heizungs_dict['timestamp']).strftime(
+                                                '%Y-%m-%d %H:%M:%S')))
+            logmessage("-"*77)
+
+            for l in data:
+                heizungs_dict = dict(zip(fields, l))
+
+                minutes_ago_since_now = getTimeDifferenceFromNow(heizungs_dict['timestamp'])
+                do_firing = "--"
+                spread = heizungs_dict['heizung_vl'] - heizungs_dict['heizung_rl']
+
+                if heizungs_dict['speicher_3_kopf'] < 29 \
+                        and heizungs_dict['speicher_4_mitte'] < 29 \
+                        and heizungs_dict['speicher_5_boden'] < 29:
+                    do_firing = "ON"
+
+                elif heizungs_dict['speicher_3_kopf'] < 35 \
+                        and heizungs_dict['speicher_4_mitte'] < 30 \
+                        and heizungs_dict['speicher_5_boden'] < 30 \
+                        and spread <= 2:
+                        # if heizungs_dict['heizung_d'] == 0:
+                        #if minutes_ago_since_now < 15: # only if messurements are not so long ago
+                    do_firing = "ON"
+
+                # this is enough energy!
+                if heizungs_dict['speicher_5_boden'] > 70:
+                    do_firing = "OFF"
+
+                if minutes_ago_since_now <= 30:
+                    start_list.append(do_firing)
+                    solar_list.append(heizungs_dict['solar_strahlung'])
+
+                logmessage("%r %r %r %.1f %r %r %r" % (
+                      datetime.datetime.fromtimestamp(l[0]).strftime('%Y-%m-%d %H:%M:%S')
+                    , heizungs_dict['heizung_d']
+                    , heizungs_dict['d_heizung_pumpe']
+                    , spread
+                    , do_firing
+                    , minutes_ago_since_now
+                    , l
+                ))
+        except IndexError:
+            logmessage("-"*77)
+            logmessage("there is nothing to examine...")
+        logmessage("-"*77)
+
+        # check if wood gasifier start is necessary:
+        if "OFF" in start_list or not start_list:
+            return_do_firing = "OFF"
+        elif "ON" in start_list:
+            return_do_firing = "ON"
+        else:
+            return_do_firing = "--"
+
+        # for a very sunny day exeception should be made here:
+        # be optimistic that enough hot water will be produced
+        # if the mean of the solar radiation values is big enough, shut off firing
+        mean_solar = 0
+        try:
+            mean_solar = sum(solar_list)/len(solar_list)
+            if mean_solar > 400:
+                return_do_firing = "OFF"
+        except ZeroDivisionError:
+            # empty list
+            pass
+        logmessage(simplejson.dumps({"t": dt_now, "mean solar": mean_solar, "solar_list_30m": solar_list}))
+        logmessage(simplejson.dumps({"t": dt_now, "firing_decision": return_do_firing, "start_list_30m": start_list, "fire_since": self.start_fireing}))
+        logmessage("-" * 77)
+
+        return return_do_firing
+
+    def run(self):
+        # blnet = getMeasurementsFromUVR1611(blnet_host, timeout=(3.05, 5), password=None)
+
+        # this is only for operating_mode firewood!
+        if len(sys.argv) > 1 and sys.argv[1] == 'ON':
+            logmessage("Start burn-off per comandline...")
+            self.start_firing()
+            logmessage("manually start done....")
+            sleep(5)
+            # better wait some time?
+            self.stop_firing()
+
+        else:
+            while True:
+                start = time()
+                data = []
+
+                # old way to transfer the data to uvr1611
+                if raspberry:
+                    self.transferData()
+
+                result = self.check_measurements(data)
+
+                if operating_mode == 'firewood':
+                    if result == "ON":
+                        self.start_firing()
+                    else:
+                        self.stop_firing()
+
+                elif operating_mode == 'pellets':
+                    if result == "ON":
+                        if self.firing_start is None:
+                            self.firing_start = time()
+                            self.start_firing()
+
+                    elif result == 'OFF':
+                        self.stop_firing()
+
+                        if self.firing_start:
+                            message = "combustion time: %r hours" % (round((time() - self.firing_start)/3600, 1))
+                            logmessage(message)
+
+                            self.firing_start = None
+
+                    else: # result == '--'
+                        pass
+
+                end = time()
+
+                seconds_processing = end - start
+                to_sleep = 120 - seconds_processing
+                if seconds_processing > 0:
+                    sleep(to_sleep)  # sleeping time in seconds
 
 if __name__ == '__main__':
-    main()
+    h = heating()
+    h.run()
