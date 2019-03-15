@@ -267,9 +267,10 @@ class heating(object):
                 start = time()
                 data = []
 
+                # moved to extra process transfer_blnet_data.py
                 # old way to transfer the data to uvr1611
-                if raspberry:
-                    self.transferData()
+                # if raspberry:
+                #    self.transferData()
 
                 result = self.check_measurements(data)
 
