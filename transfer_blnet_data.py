@@ -85,7 +85,7 @@ class heating(object):
             end = time()
 
             seconds_processing = end - start
-            to_sleep = 120 - seconds_processing
+            to_sleep = 60 - seconds_processing
             if seconds_processing > 0:
                 sleep(to_sleep)  # sleeping time in seconds
 
