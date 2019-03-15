@@ -73,7 +73,7 @@ def getTimeDifferenceFromNow(timestamp):
 
 class heating(object):
     def __init__(self):
-        self.start_fireing = None
+        self.firing_start = None
 
     def start_firing(self):
         """
@@ -245,7 +245,7 @@ class heating(object):
             # empty list
             pass
         logmessage(simplejson.dumps({"t": dt_now, "mean solar": mean_solar, "solar_list_30m": solar_list}))
-        logmessage(simplejson.dumps({"t": dt_now, "firing_decision": return_do_firing, "start_list_30m": start_list, "fire_since": self.start_fireing}))
+        logmessage(simplejson.dumps({"t": dt_now, "firing_decision": return_do_firing, "start_list_30m": start_list, "fire_since": self.firing_start}))
         logmessage("-" * 77)
 
         return return_do_firing
