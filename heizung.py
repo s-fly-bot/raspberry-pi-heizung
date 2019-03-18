@@ -165,11 +165,7 @@ class heating(object):
         else:
             data = [uvr_direct_data]
 
-        # exceptions if it is between 0:00 and 0:10!
         return_do_firing = "OFF"  # default
-        if int(strftime("%H")) == 0 and int(strftime("%M")) <= 10:
-            return_do_firing = "--"  # no values available :(
-            # Todo build an api for last 30 Minutes values!
 
         start_list = []
         solar_list = []
@@ -226,7 +222,14 @@ class heating(object):
         logmessage("-"*77)
 
         # check if wood gasifier start is necessary:
-        if "OFF" in start_list or not start_list:
+        if not start_list:
+            # exceptions if it is between 0:00 and 0:10!
+            if int(strftime("%H")) == 0 and int(strftime("%M")) <= 10:
+                return_do_firing = "--"  # no values available :(
+                # Todo build an api for last 30 Minutes values!
+            else:
+                return_do_firing = "OFF"
+        elif "OFF" in start_list or not start_list:
             return_do_firing = "OFF"
         elif "ON" in start_list:
             return_do_firing = "ON"
