@@ -186,18 +186,18 @@ class heating(object):
                 do_firing = "--"
                 spread = heizungs_dict['heizung_vl'] - heizungs_dict['heizung_rl']
 
-                if heizungs_dict['speicher_3_kopf'] < 29 \
-                        and heizungs_dict['speicher_4_mitte'] < 29 \
+                if heizungs_dict['speicher_3_kopf'] < 39 \
+                        and heizungs_dict['speicher_4_mitte'] < 35 \
                         and heizungs_dict['speicher_5_boden'] < 29:
                     do_firing = "ON"
 
-                elif heizungs_dict['speicher_3_kopf'] < 35 \
-                        and heizungs_dict['speicher_4_mitte'] < 30 \
-                        and heizungs_dict['speicher_5_boden'] < 30 \
-                        and spread <= 2:
-                        # if heizungs_dict['heizung_d'] == 0:
-                        #if minutes_ago_since_now < 15: # only if messurements are not so long ago
-                    do_firing = "ON"
+                # elif heizungs_dict['speicher_3_kopf'] < 35 \
+                #         and heizungs_dict['speicher_4_mitte'] < 30 \
+                #         and heizungs_dict['speicher_5_boden'] < 30 \
+                #         and spread <= 2:
+                #         # if heizungs_dict['heizung_d'] == 0:
+                #         #if minutes_ago_since_now < 15: # only if messurements are not so long ago
+                #     do_firing = "ON"
 
                 # this is enough energy!
                 if heizungs_dict['speicher_5_boden'] > 70:
