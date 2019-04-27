@@ -188,7 +188,7 @@ class heating(object):
 
                 if heizungs_dict['speicher_3_kopf'] < 39 \
                         and heizungs_dict['speicher_4_mitte'] < 35 \
-                        and heizungs_dict['speicher_5_boden'] < 29:
+                        and heizungs_dict['speicher_5_boden'] < 32:
                     do_firing = "ON"
 
                 # elif heizungs_dict['speicher_3_kopf'] < 35 \
