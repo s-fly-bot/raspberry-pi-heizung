@@ -134,6 +134,7 @@ class heating(object):
 
         except:
             logger.error("| something went wrong while retrieving from %s" % url_internal)
+            logger.error("  Unexpected error:", sys.exc_info()[0])
 
         logmessage('+----------------- transfer done -------------------------------------')
 
